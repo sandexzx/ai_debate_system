@@ -7,10 +7,11 @@ from agents.gatekeeper import Gatekeeper
 from agents.debater import ProDebater, ContraDebater, AlternativeDebater, DebateContext
 from agents.judge import Judge, RoundResult
 from config import Config
+from token_tracker import token_tracker
 
 @dataclass
 class DebateSession:
-    """Полная сессия дебатов с метаданными"""
+    """Полная сессия дебатов с метаданными и статистикой токенов"""
     session_id: str
     original_query: str
     enhanced_query: str
@@ -20,6 +21,7 @@ class DebateSession:
     results: List[RoundResult] = field(default_factory=list)
     final_verdict: Optional[str] = None
     status: str = "pending"  # pending, running, completed, failed
+    token_stats: Optional[str] = None  # Отчет по токенам
 
 class DebateOrchestrator:
     """
@@ -138,6 +140,11 @@ class DebateOrchestrator:
             # Этап 5: Итоговый вердикт от судьи
             print("\n⚖️ Формируем итоговый вердикт...")
             session.final_verdict = await self.judge.final_verdict(session.context)
+            
+            # Этап 6: Генерируем отчет по токенам и затратам
+            if token_tracker:
+                session.token_stats = token_tracker.format_session_report(session_id)
+                print(f"\n💰 Отчет по токенам готов")
             
             session.status = "completed"
             session.end_time = datetime.now()

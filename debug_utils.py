@@ -5,6 +5,7 @@
 
 import json
 from typing import Dict, Any
+from datetime import datetime
 from agents.debater import DebateContext
 from agents.orchestrator import DebateSession
 
@@ -158,14 +159,18 @@ async def async_debug_run(query: str):
     from config import Config
     from models.api_client import ModelManager
     from agents.orchestrator import DebateOrchestrator
+    from token_tracker import token_tracker
     
-    async with ModelManager(Config.MODELS) as manager:
+    # Создаем специальный session_id для отладки
+    debug_session_id = f"debug_{query[:20].replace(' ', '_')}_{datetime.now().strftime('%H%M%S')}"
+    
+    async with ModelManager(Config.MODELS, session_id=debug_session_id) as manager:
         orchestrator = DebateOrchestrator(manager)
         
         print("🐛 Запуск дебатов в отладочном режиме")
         debug_logger.log_step("Starting debug debate", {"query": query})
         
-        session = await orchestrator.run_debate(query)
+        session = await orchestrator.run_debate(query, session_id=debug_session_id)
         
         debug_logger.show_session_summary(session)
         
@@ -176,7 +181,17 @@ async def async_debug_run(query: str):
             for round_num in session.context.arguments_history.keys():
                 show_round_arguments(session.context, round_num)
         
-        # Экспортируем для анализа
+        # Показываем детальную статистику токенов
+        if session.token_stats:
+            print("\n" + "="*80)
+            print(session.token_stats)
+        
+        # Экспортируем детальную статистику токенов
+        if token_tracker:
+            token_export_result = token_tracker.export_session_usage(debug_session_id)
+            print(f"\n{token_export_result}")
+        
+        # Экспортируем полную сессию для анализа
         debug_logger.export_session_to_file(session)
         
         return session

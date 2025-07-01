@@ -25,15 +25,16 @@ from models.api_client import ModelManager
 from agents.orchestrator import DebateOrchestrator
 
 class DebateApp:
-    """Главное приложение для управления дебатами"""
+    """Главное приложение для управления дебатами с поддержкой трекинга токенов"""
     
-    def __init__(self):
+    def __init__(self, session_id: str = None):
         self.model_manager: Optional[ModelManager] = None
         self.orchestrator: Optional[DebateOrchestrator] = None
+        self.session_id = session_id or f"app_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
     
     async def __aenter__(self):
-        """Async context manager для инициализации"""
-        self.model_manager = ModelManager(Config.MODELS)
+        """Async context manager для инициализации с передачей session_id"""
+        self.model_manager = ModelManager(Config.MODELS, session_id=self.session_id)
         await self.model_manager.__aenter__()
         
         self.orchestrator = DebateOrchestrator(self.model_manager)
@@ -45,15 +46,51 @@ class DebateApp:
             await self.model_manager.__aexit__(exc_type, exc_val, exc_tb)
     
     async def run_single_debate(self, query: str) -> str:
-        """Запускает один дебат и возвращает результат"""
+        """Запускает один дебат и возвращает результат с отчетом по токенам"""
         if not self.orchestrator:
             raise RuntimeError("Приложение не инициализировано")
         
         print(f"🎯 Запускаем дебаты: {query}")
         print("=" * 80)
         
-        result = await self.orchestrator.run_quick_debate(query)
-        return result
+        session = await self.orchestrator.run_debate(query)
+        
+        # Формируем результат с токенами
+        result_parts = []
+        
+        if session.status == "rejected":
+            result_parts.append(session.final_verdict)
+        elif session.status == "failed":
+            result_parts.append(f"❌ Ошибка: {session.final_verdict}")
+        elif session.status == "completed":
+            # Формируем красивый отчет
+            report_parts = [
+                f"🎯 РЕЗУЛЬТАТ ДЕБАТОВ",
+                f"📝 Вопрос: {session.original_query}",
+                ""
+            ]
+            
+            # Добавляем краткую сводку по раундам
+            if session.results:
+                report_parts.append("📊 СВОДКА ПО РАУНДАМ:")
+                for i, result in enumerate(session.results, 1):
+                    winner_scores = result.scores[result.winner]
+                    report_parts.append(f"  Раунд {i}: {result.winner} ({winner_scores.total} баллов)")
+                report_parts.append("")
+            
+            # Добавляем итоговый вердикт
+            if session.final_verdict:
+                report_parts.append(session.final_verdict)
+            
+            result_parts.append("\n".join(report_parts))
+            
+            # Добавляем отчет по токенам
+            if session.token_stats:
+                result_parts.extend(["", "=" * 80, session.token_stats])
+        else:
+            result_parts.append(f"⏳ Дебаты в процессе... (статус: {session.status})")
+        
+        return "\n".join(result_parts)
     
     async def interactive_mode(self):
         """Интерактивный режим для множественных запросов"""
@@ -190,6 +227,12 @@ async def main():
         "--interactive", "-i",
         action="store_true",
         help="Запустить в интерактивном режиме"
+    )
+
+    parser.add_argument(
+        "--demo", 
+        action="store_true",
+        help="Запустить демонстрационный режим с примерами"
     )
     
     parser.add_argument(
