@@ -45,20 +45,28 @@ class TokenTracker:
         # Цены указаны за 1K токенов в USD
         self.pricing = {
             "google/gemini-2.5-flash": {
-                "input": 0.000075,   # $0.075 per 1K input tokens
-                "output": 0.0003     # $0.30 per 1K output tokens
+                "input": 0.0003,   # $0.30 per 1M input tokens -> $0.0003 per 1K input tokens
+                "output": 0.0025     # $2.50 per 1M output tokens -> $0.0025 per 1K output tokens
             },
-            "anthropic/claude-3.5-sonnet": {
-                "input": 0.003,
-                "output": 0.015
+            "anthropic/claude-sonnet-4": {
+                "input": 0.003,   # $3 per 1M input tokens -> $0.003 per 1K input tokens
+                "output": 0.015     # $15 per 1M output tokens -> $0.015 per 1K output tokens
             },
-            "openai/gpt-4": {
-                "input": 0.03,
-                "output": 0.06
+            "openai/gpt-4o-mini-2024-07-18": {
+                "input": 0.00015,  # $0.15 per 1M input tokens -> $0.00015 per 1K input tokens
+                "output": 0.00060   # $0.60 per 1M output tokens -> $0.00060 per 1K output tokens
             },
-            "openai/gpt-4-turbo": {
-                "input": 0.01,
-                "output": 0.03
+            "google/gemini-2.5-pro": {
+                "input": 0.00125,  # $1.25 per 1M input tokens -> $0.00125 per 1K input tokens
+                "output": 0.010     # $10 per 1M output tokens -> $0.010 per 1K output tokens
+            },
+            "openai/o3": {
+                "input": 0.002,    # $2 per 1M input tokens -> $0.002 per 1K input tokens
+                "output": 0.008      # $8 per 1M output tokens -> $0.008 per 1K output tokens
+            },
+            "openai/gpt-4.1": {
+                "input": 0.002,    # $2 per 1M input tokens -> $0.002 per 1K input tokens
+                "output": 0.008      # $8 per 1M output tokens -> $0.008 per 1K output tokens
             }
         }
         

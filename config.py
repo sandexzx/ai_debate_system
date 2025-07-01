@@ -31,7 +31,7 @@ class Config:
             name="gatekeeper",
             api_key=OPENROUTER_API_KEY,
             base_url=OPENROUTER_BASE_URL,
-            model_id="google/gemini-2.5-flash",
+            model_id="openai/gpt-4o-mini-2024-07-18",
             temperature=0.3  # Более строгий для фильтрации
         ),
         
@@ -39,7 +39,7 @@ class Config:
             name="debater_pro", 
             api_key=OPENROUTER_API_KEY,
             base_url=OPENROUTER_BASE_URL,
-            model_id="google/gemini-2.5-flash",
+            model_id="google/gemini-2.5-pro",
             temperature=0.8  # Более креативный для споров
         ),
         
@@ -47,7 +47,7 @@ class Config:
             name="debater_contra",
             api_key=OPENROUTER_API_KEY,
             base_url=OPENROUTER_BASE_URL,
-            model_id="google/gemini-2.5-flash",
+            model_id="anthropic/claude-sonnet-4",
             temperature=0.8
         ),
         
@@ -55,7 +55,7 @@ class Config:
             name="debater_alternative",
             api_key=OPENROUTER_API_KEY,
             base_url=OPENROUTER_BASE_URL,
-            model_id="google/gemini-2.5-flash",
+            model_id="openai/gpt-4.1",
             temperature=0.9  # Самый креативный для альтернатив
         ),
         
@@ -63,7 +63,7 @@ class Config:
             name="judge",
             api_key=OPENROUTER_API_KEY,
             base_url=OPENROUTER_BASE_URL,
-            model_id="google/gemini-2.5-flash",
+            model_id="anthropic/claude-sonnet-4",
             temperature=0.4  # Более объективный
         )
     }
