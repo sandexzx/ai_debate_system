@@ -53,7 +53,8 @@ class DebateApp:
         print(f"🎯 Запускаем дебаты: {query}")
         print("=" * 80)
         
-        session = await self.orchestrator.run_debate(query)
+        # Передаем наш session_id в orchestrator, чтобы избежать рассинхронизации
+        session = await self.orchestrator.run_debate(query, session_id=self.session_id)
         
         # Формируем результат с токенами
         result_parts = []
