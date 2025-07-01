@@ -193,9 +193,9 @@ async def main():
     )
     
     parser.add_argument(
-        "--demo", "-d", 
+        "--debug", 
         action="store_true",
-        help="Запустить демонстрационный режим"
+        help="Запустить в режиме отладки с детальными логами"
     )
     
     args = parser.parse_args()
@@ -218,7 +218,15 @@ async def main():
     try:
         async with DebateApp() as app:
             
-            if args.demo:
+            if args.debug:
+                # Режим отладки - используем асинхронную функцию
+                if args.query:
+                    from debug_utils import async_debug_run
+                    await async_debug_run(args.query)
+                else:
+                    print("❌ В режиме отладки нужно указать запрос")
+                    print("Пример: python main.py --debug 'Ваш вопрос'")
+            elif args.demo:
                 await app.demo_mode()
             elif args.interactive:
                 await app.interactive_mode()

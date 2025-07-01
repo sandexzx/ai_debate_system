@@ -1,4 +1,3 @@
-# agents/orchestrator.py - Управление процессом
 import asyncio
 from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass, field
@@ -193,6 +192,9 @@ class DebateOrchestrator:
                 print(f"    ❌ Ошибка у {role}: {e}")
                 round_arguments[role] = f"[Техническая ошибка при генерации аргумента]"
         
+        # ВАЖНО: Сохраняем аргументы в контекст ДО оценки судьи
+        context.arguments_history[context.current_round] = round_arguments
+        
         # Оцениваем раунд через судью
         print("  ⚖️ Судья оценивает раунд...")
         round_result = await self.judge.evaluate_round(context, round_arguments)
@@ -213,21 +215,13 @@ class DebateOrchestrator:
     def _update_context_with_results(self, context: DebateContext, round_result: RoundResult):
         """
         Обновляет контекст дебатов результатами последнего раунда.
-        Добавляет аргументы, оценки и фидбек судьи.
+        Добавляет оценки и фидбек судьи.
+        
+        ВАЖНО: Аргументы уже должны быть сохранены в context.arguments_history
+        в методе _conduct_round, поэтому здесь мы только добавляем оценки.
         """
         
         round_num = context.current_round
-        
-        # Извлекаем аргументы из результата раунда
-        # (они должны быть сохранены в процессе оценки)
-        round_arguments = {}
-        for role in round_result.scores.keys():
-            # Здесь нужно получить аргументы из round_result
-            # В реальной реализации стоит передавать их явно
-            round_arguments[role] = f"[Аргумент {role} раунда {round_num}]"
-        
-        # Обновляем историю аргументов
-        context.arguments_history[round_num] = round_arguments
         
         # Обновляем историю очков
         context.scores_history[round_num] = {

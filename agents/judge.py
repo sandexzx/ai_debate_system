@@ -1,4 +1,3 @@
-# agents/judge.py - Судья
 import re
 from typing import Dict, Tuple, Optional
 from models.prompts import PromptTemplates
@@ -116,7 +115,12 @@ class Judge:
             return self._get_fallback_verdict(context)
     
     def _update_context_with_arguments(self, context: DebateContext, round_arguments: Dict[str, str]) -> DebateContext:
-        """Обновляет контекст новыми аргументами раунда"""
+        """
+        Обновляет контекст новыми аргументами раунда.
+        
+        ВАЖНО: Этот метод создает ВРЕМЕННУЮ копию контекста только для генерации
+        промпта судьи. Реальное обновление контекста происходит в orchestrator.
+        """
         updated_history = context.arguments_history.copy()
         updated_history[context.current_round] = round_arguments
         
