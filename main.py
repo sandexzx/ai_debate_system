@@ -23,6 +23,7 @@ from typing import Optional
 from config import Config
 from models.api_client import ModelManager
 from agents.orchestrator import DebateOrchestrator
+from utils.file_manager import save_debate_result # Добавляем импорт
 
 class DebateApp:
     """Главное приложение для управления дебатами с поддержкой трекинга токенов"""
@@ -91,7 +92,12 @@ class DebateApp:
         else:
             result_parts.append(f"⏳ Дебаты в процессе... (статус: {session.status})")
         
-        return "\n".join(result_parts)
+        final_result_content = "\n".join(result_parts)
+        
+        # Сохраняем результат в файл
+        save_debate_result(query, final_result_content)
+        
+        return final_result_content
     
     async def interactive_mode(self):
         """Интерактивный режим для множественных запросов"""
