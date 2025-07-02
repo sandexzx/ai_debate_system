@@ -1,6 +1,10 @@
 import os
 from dataclasses import dataclass
 from typing import Dict, Any, Optional
+from dotenv import load_dotenv
+
+# Загружаем переменные из .env файла при каждом импорте
+load_dotenv()
 
 @dataclass
 class ModelConfig:
