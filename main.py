@@ -16,6 +16,7 @@ AI Debate System - Система дебатов между ИИ агентам�
 import asyncio
 import argparse
 import sys
+import os
 from datetime import datetime
 from typing import Optional
 
@@ -266,6 +267,18 @@ async def main():
         print("Или измените значение в config.py")
         sys.exit(1)
     
+    # Проверяем наличие файла prompt.txt в директории скрипта
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    prompt_file = os.path.join(script_dir, "prompt.txt")
+    
+    query_from_file = None
+    if os.path.exists(prompt_file):
+        try:
+            with open(prompt_file, 'r', encoding='utf-8') as f:
+                query_from_file = f.read().strip()
+        except Exception as e:
+            print(f"⚠️ Ошибка при чтении prompt.txt: {e}")
+    
     # Выбираем конфигурацию моделей перед запуском
     print("🚀 СИСТЕМА ДЕБАТОВ МЕЖДУ ИИ")
     print("Добро пожаловать! Сначала выберите модель для дебатов.")
@@ -290,18 +303,24 @@ async def main():
             
             if args.debug:
                 # Режим отладки - используем асинхронную функцию
-                if args.query:
+                query = args.query or query_from_file
+                if query:
                     from debug_utils import async_debug_run
-                    await async_debug_run(args.query)
+                    await async_debug_run(query)
                 else:
                     print("❌ В режиме отладки нужно указать запрос")
-                    print("Пример: python main.py --debug 'Ваш вопрос'")
+                    print("Пример: python main.py --debug 'Ваш вопрос' или создать файл prompt.txt")
             elif args.demo:
                 await app.demo_mode()
             elif args.interactive:
                 await app.interactive_mode()
             elif args.query:
                 result = await app.run_single_debate(args.query)
+                print(result)
+            elif query_from_file:
+                # Если есть файл prompt.txt, используем его
+                print(f"📝 Используем запрос из prompt.txt: {query_from_file}")
+                result = await app.run_single_debate(query_from_file)
                 print(result)
             else:
                 # Если нет аргументов, запускаем интерактивный режим
