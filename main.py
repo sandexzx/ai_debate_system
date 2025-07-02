@@ -24,18 +24,20 @@ from config import Config
 from models.api_client import ModelManager
 from agents.orchestrator import DebateOrchestrator
 from utils.file_manager import save_debate_result # Добавляем импорт
+from model_selector import select_models
 
 class DebateApp:
     """Главное приложение для управления дебатами с поддержкой трекинга токенов"""
     
-    def __init__(self, session_id: str = None):
+    def __init__(self, session_id: str = None, models_config: dict = None):
         self.model_manager: Optional[ModelManager] = None
         self.orchestrator: Optional[DebateOrchestrator] = None
         self.session_id = session_id or f"app_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        self.models_config = models_config or Config.MODELS
     
     async def __aenter__(self):
         """Async context manager для инициализации с передачей session_id"""
-        self.model_manager = ModelManager(Config.MODELS, session_id=self.session_id)
+        self.model_manager = ModelManager(self.models_config, session_id=self.session_id)
         await self.model_manager.__aenter__()
         
         self.orchestrator = DebateOrchestrator(self.model_manager)
@@ -101,7 +103,7 @@ class DebateApp:
     
     async def interactive_mode(self):
         """Интерактивный режим для множественных запросов"""
-        print("🎭 СИСТЕМА ДЕБАТОВ МЕЖДУ ИИ")
+        print("🎭 ИНТЕРАКТИВНЫЙ РЕЖИМ")
         print("Введите ваш вопрос, и AI агенты проведут дебаты!")
         print("Команды: 'exit' - выход, 'help' - помощь, 'sessions' - список сессий")
         print("=" * 80)
@@ -264,9 +266,27 @@ async def main():
         print("Или измените значение в config.py")
         sys.exit(1)
     
-    # Запускаем приложение
+    # Выбираем конфигурацию моделей перед запуском
+    print("🚀 СИСТЕМА ДЕБАТОВ МЕЖДУ ИИ")
+    print("Добро пожаловать! Сначала выберите модель для дебатов.")
+    print()
+    
     try:
-        async with DebateApp() as app:
+        models_config = select_models()
+        print()
+        print("🎯 Конфигурация установлена! Запускаем систему...")
+        print("=" * 60)
+        print()
+    except KeyboardInterrupt:
+        print("\n👋 Выход из программы")
+        sys.exit(0)
+    except Exception as e:
+        print(f"❌ Ошибка при выборе модели: {e}")
+        sys.exit(1)
+    
+    # Запускаем приложение с выбранной конфигурацией
+    try:
+        async with DebateApp(models_config=models_config) as app:
             
             if args.debug:
                 # Режим отладки - используем асинхронную функцию

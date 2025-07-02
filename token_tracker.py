@@ -44,6 +44,10 @@ class TokenTracker:
         # Примерные цены OpenRouter (может меняться, проверяйте актуальные)
         # Цены указаны за 1K токенов в USD
         self.pricing = {
+            "google/gemini-2.5-flash-lite-preview-06-17": {
+                "input": 0.0001,   # $0.10 per 1M input tokens -> $0.0001 per 1K input tokens
+                "output": 0.0004     # $0.4 per 1M output tokens -> $0.0004 per 1K output tokens
+            },
             "google/gemini-2.5-flash": {
                 "input": 0.0003,   # $0.30 per 1M input tokens -> $0.0003 per 1K input tokens
                 "output": 0.0025     # $2.50 per 1M output tokens -> $0.0025 per 1K output tokens
