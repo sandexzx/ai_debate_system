@@ -17,8 +17,10 @@ class APIClient:
     
     async def __aenter__(self):
         """Async context manager - создаем сессию"""
+        # Увеличиваем таймауты для тяжелых моделей типа gpt-5
+        timeout_seconds = 120 if "neuroapi.host" in self.config.base_url else 30
         self.session = aiohttp.ClientSession(
-            timeout=aiohttp.ClientTimeout(total=30)
+            timeout=aiohttp.ClientTimeout(total=timeout_seconds)
         )
         return self
     
@@ -41,6 +43,10 @@ class APIClient:
             if self.config.site_name:
                 headers["X-Title"] = self.config.site_name
                 
+        # Для neuroAPI используем OpenAI-совместимый формат
+        elif "neuroapi.host" in self.config.base_url:
+            headers["Authorization"] = f"Bearer {self.config.api_key}"
+                
         elif "openai" in self.config.base_url:
             headers["Authorization"] = f"Bearer {self.config.api_key}"
         elif "anthropic" in self.config.base_url:
@@ -54,8 +60,11 @@ class APIClient:
     def _build_payload(self, messages: list, system_prompt: str = "") -> Dict[str, Any]:
         """Формируем payload для разных провайдеров"""
         
-        # Для OpenRouter и обычного OpenAI используем одинаковый формат
-        if "openrouter.ai" in self.config.base_url or "openai" in self.config.base_url:
+        # Для OpenRouter, neuroAPI и обычного OpenAI используем одинаковый формат
+        if ("openrouter.ai" in self.config.base_url or 
+            "neuroapi.host" in self.config.base_url or 
+            "openai" in self.config.base_url):
+            
             all_messages = []
             if system_prompt:
                 all_messages.append({"role": "system", "content": system_prompt})
@@ -64,9 +73,12 @@ class APIClient:
             payload = {
                 "model": self.config.model_id,
                 "messages": all_messages,
-                "max_tokens": self.config.max_tokens,
                 "temperature": self.config.temperature
             }
+            
+            # Для neuroAPI не добавляем max_tokens, так как это может вызвать ошибку 500
+            if "neuroapi.host" not in self.config.base_url:
+                payload["max_tokens"] = self.config.max_tokens
             
         elif "anthropic" in self.config.base_url:
             # Claude формат (оставляем для будущего использования)
@@ -130,7 +142,7 @@ class APIClient:
                     # Формат ответа Claude
                     completion_text = data["content"][0]["text"]
                 else:
-                    # Формат ответа OpenAI/OpenRouter и других совместимых провайдеров
+                    # Формат ответа OpenAI/OpenRouter/neuroAPI и других совместимых провайдеров
                     completion_text = data["choices"][0]["message"]["content"]
                 
                 # Логируем использование токенов, если включен трекинг

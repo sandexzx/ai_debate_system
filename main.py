@@ -253,17 +253,26 @@ async def main():
     
     args = parser.parse_args()
     
-    # Проверяем наличие API ключей для OpenRouter
+    # Проверяем наличие API ключей в зависимости от выбранного провайдера
     missing_keys = []
-    if not Config.OPENROUTER_API_KEY or Config.OPENROUTER_API_KEY == "your-openrouter-key":
-        missing_keys.append("OPENROUTER_API_KEY")
+    
+    if Config.PROVIDER == "neuroapi":
+        if not Config.NEUROAPI_API_KEY or Config.NEUROAPI_API_KEY == "your-neuroapi-key":
+            missing_keys.append("NEUROAPI_API_KEY")
+    else:  # openrouter
+        if not Config.OPENROUTER_API_KEY or Config.OPENROUTER_API_KEY == "your-openrouter-key":
+            missing_keys.append("OPENROUTER_API_KEY")
     
     if missing_keys:
-        print("❌ Отсутствуют API ключи для OpenRouter:")
+        provider_name = "neuroAPI" if Config.PROVIDER == "neuroapi" else "OpenRouter"
+        print(f"❌ Отсутствуют API ключи для {provider_name}:")
         for key in missing_keys:
             print(f"   • {key}")
-        print("\nУстановите переменную окружения:")
-        print("   export OPENROUTER_API_KEY='ваш-ключ-openrouter'")
+        print(f"\nУстановите переменную окружения:")
+        if Config.PROVIDER == "neuroapi":
+            print("   export NEUROAPI_API_KEY='ваш-ключ-neuroapi'")
+        else:
+            print("   export OPENROUTER_API_KEY='ваш-ключ-openrouter'")
         print("Или измените значение в config.py")
         sys.exit(1)
     
@@ -285,16 +294,18 @@ async def main():
     print()
     
     try:
-        models_config = select_models()
-        print()
-        print("🎯 Конфигурация установлена! Запускаем систему...")
+        # Используем конфигурацию в зависимости от выбранного провайдера
+        models_config = Config.get_models()
+        provider_name = "neuroAPI" if Config.PROVIDER == "neuroapi" else "OpenRouter"
+        print(f"🎯 Используем провайдер: {provider_name}")
+        print(f"🎯 Конфигурация установлена! Запускаем систему...")
         print("=" * 60)
         print()
     except KeyboardInterrupt:
         print("\n👋 Выход из программы")
         sys.exit(0)
     except Exception as e:
-        print(f"❌ Ошибка при выборе модели: {e}")
+        print(f"❌ Ошибка при настройке: {e}")
         sys.exit(1)
     
     # Запускаем приложение с выбранной конфигурацией
