@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Выбор формулировки</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1>Выберите формулировку</h1>
+      <a href="{{ url_for('index', provider=provider) }}" class="btn">← Назад</a>
+    </header>
+
+    <section class="card">
+      <p class="subtitle">Проверьте улучшенную версию и выберите, по какой формулировке проводить дебаты.</p>
+
+      <div class="grid">
+        <div class="grid-item">
+          <label class="label">Изначальная формулировка</label>
+          <div class="msg">
+            <div class="msg-body">{{ original_query }}</div>
+          </div>
+        </div>
+        <div class="grid-item">
+          <label class="label">Скорректированная швейцаром</label>
+          <div class="msg">
+            <div class="msg-body">{{ enhanced_query }}</div>
+          </div>
+        </div>
+      </div>
+
+      <form method="post" action="{{ url_for('debate_stream') }}" class="actions" style="justify-content: space-between; margin-top: 14px;">
+        <div>
+          <input type="hidden" name="provider" value="{{ provider }}">
+          <input type="hidden" name="original_query" value="{{ original_query }}">
+          <input type="hidden" name="enhanced_query" value="{{ enhanced_query }}">
+          {% for role, _ in roles %}
+            <input type="hidden" name="{{ role }}" value="{{ defaults[role] }}">
+          {% endfor %}
+        </div>
+        <div style="display:flex; gap:10px;">
+          <button class="btn" name="use" value="original" type="submit">Провести по изначальной</button>
+          <button class="btn primary" name="use" value="enhanced" type="submit">Провести по скорректированной</button>
+        </div>
+      </form>
+    </section>
+
+  </div>
+</body>
+</html>
+

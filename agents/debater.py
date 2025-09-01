@@ -11,6 +11,7 @@ class DebateContext:
     arguments_history: Dict[int, Dict[str, str]]  # {round: {role: argument}}
     scores_history: Dict[int, Dict[str, int]]     # {round: {role: score}}
     judge_feedback: Dict[int, str]                # {round: feedback}
+    summaries: Dict[int, Dict[str, str]]          # {round: {role: summary}}
 
 class BaseDebater:
     """

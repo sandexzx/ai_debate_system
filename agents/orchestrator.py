@@ -1,5 +1,5 @@
 import asyncio
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 
@@ -59,7 +59,16 @@ class DebateOrchestrator:
         # История сессий (в реальном приложении можно сохранять в БД)
         self.sessions: Dict[str, DebateSession] = {}
     
-    async def run_debate(self, query: str, session_id: Optional[str] = None) -> DebateSession:
+    async def run_debate(
+        self,
+        query: str,
+        session_id: Optional[str] = None,
+        override_query: Optional[str] = None,
+        known_enhanced: Optional[str] = None,
+        skip_enhance: bool = False,
+        skip_gatekeeper: bool = False,
+        on_update: Optional[Callable[[str, Dict], None]] = None,
+    ) -> DebateSession:
         """
         Запускает полный цикл дебатов для заданного запроса.
         
@@ -95,8 +104,11 @@ class DebateOrchestrator:
             print(f"🎭 Начинаем дебаты для сессии: {session_id}")
             session.status = "running"
             
-            # Этап 1: Проверяем запрос через швейцара
-            should_debate, rejection_reason = await self.gatekeeper.should_debate(query)
+            # Этап 1: Проверяем запрос через швейцара (если не пропускаем)
+            if not skip_gatekeeper:
+                should_debate, rejection_reason = await self.gatekeeper.should_debate(query)
+            else:
+                should_debate, rejection_reason = True, None
             
             if not should_debate:
                 session.status = "rejected"
@@ -107,18 +119,27 @@ class DebateOrchestrator:
             print("✅ Запрос прошел фильтрацию")
             
             # Этап 2: Улучшаем формулировку запроса
-            enhanced_query = await self.gatekeeper.get_enhanced_query(query)
+            if skip_enhance and known_enhanced is not None:
+                enhanced_query = known_enhanced
+            else:
+                enhanced_query = await self.gatekeeper.get_enhanced_query(query)
             session.enhanced_query = enhanced_query
-            
+
             print(f"📝 Запрос улучшен: {enhanced_query}")
+            if on_update:
+                on_update("enhanced_query", {"enhanced_query": enhanced_query})
+
+            # Какой запрос использовать в дебатах
+            debate_query = override_query or enhanced_query
             
             # Этап 3: Инициализируем контекст дебатов
             session.context = DebateContext(
-                query=enhanced_query,
+                query=debate_query,
                 current_round=1,
                 arguments_history={},
                 scores_history={},
-                judge_feedback={}
+                judge_feedback={},
+                summaries={},
             )
             
             # Этап 4: Проводим раунды дебатов
@@ -126,7 +147,7 @@ class DebateOrchestrator:
                 print(f"\n🥊 Раунд {round_num}/{Config.DEBATE_ROUNDS}")
                 
                 session.context.current_round = round_num
-                round_result = await self._conduct_round(session.context)
+                round_result = await self._conduct_round(session.context, on_update=on_update)
                 session.results.append(round_result)
                 
                 # Обновляем контекст результатами раунда
@@ -140,11 +161,15 @@ class DebateOrchestrator:
             # Этап 5: Итоговый вердикт от судьи
             print("\n⚖️ Формируем итоговый вердикт...")
             session.final_verdict = await self.judge.final_verdict(session.context)
+            if on_update and session.final_verdict:
+                on_update("final_verdict", {"final_verdict": session.final_verdict})
             
             # Этап 6: Генерируем отчет по токенам и затратам
             if token_tracker:
                 session.token_stats = token_tracker.format_session_report(session_id)
                 print(f"\n💰 Отчет по токенам готов")
+                if on_update and session.token_stats:
+                    on_update("token_stats", {"token_stats": session.token_stats})
             
             session.status = "completed"
             session.end_time = datetime.now()
@@ -159,7 +184,7 @@ class DebateOrchestrator:
         
         return session
     
-    async def _conduct_round(self, context: DebateContext) -> RoundResult:
+    async def _conduct_round(self, context: DebateContext, on_update: Optional[Callable[[str, Dict], None]] = None) -> RoundResult:
         """
         Проводит один раунд дебатов между всеми участниками.
         
@@ -178,26 +203,42 @@ class DebateOrchestrator:
         
         round_arguments = {}
         
-        # Собираем аргументы от всех участников
+        # Собираем аргументы от всех участников последовательно для поэтапного отображения
         print("  🗣️ Собираем аргументы участников...")
         
-        # Запускаем генерацию аргументов параллельно для ускорения
-        tasks = []
-        for role, debater in self.debaters.items():
-            task = asyncio.create_task(
-                self._get_debater_argument(debater, context, role)
-            )
-            tasks.append((role, task))
-        
-        # Ждем завершения всех задач
-        for role, task in tasks:
+        # Проходим участников по порядку: D1, D2, D3
+        for role in ["D1", "D2", "D3"]:
+            debater = self.debaters[role]
+            
+            # Генерируем аргумент участника
             try:
-                argument = await task
+                argument = await self._get_debater_argument(debater, context, role)
                 round_arguments[role] = argument
                 print(f"    ✓ {role}: {len(argument)} символов")
+                
+                # Отправляем аргумент в интерфейс
+                if on_update:
+                    on_update("argument", {"round": context.current_round, "role": role, "text": argument})
+                
+                # Генерируем саммари для этого аргумента
+                try:
+                    if hasattr(self.model_manager, "summarize"):
+                        summary = await self.model_manager.summarize(argument)
+                        if summary:
+                            # Отправляем саммари в интерфейс
+                            if on_update:
+                                on_update("summary", {"round": context.current_round, "role": role, "summary": summary})
+                except Exception:
+                    pass  # Саммари не критично
+                    
             except Exception as e:
-                print(f"    ❌ Ошибка у {role}: {e}")
-                round_arguments[role] = f"[Техническая ошибка при генерации аргумента]"
+                argument = f"[Техническая ошибка при генерации аргумента: {str(e)}]"
+                round_arguments[role] = argument
+                print(f"    ❌ {role}: ошибка - {str(e)}")
+                
+                # Отправляем даже ошибочный аргумент
+                if on_update:
+                    on_update("argument", {"round": context.current_round, "role": role, "text": argument})
         
         # ВАЖНО: Сохраняем аргументы в контекст ДО оценки судьи
         context.arguments_history[context.current_round] = round_arguments
@@ -205,6 +246,8 @@ class DebateOrchestrator:
         # Оцениваем раунд через судью
         print("  ⚖️ Судья оценивает раунд...")
         round_result = await self.judge.evaluate_round(context, round_arguments)
+        if on_update and round_result and hasattr(round_result, "feedback"):
+            on_update("judge", {"round": context.current_round, "feedback": round_result.feedback, "scores": {role: score.total for role, score in round_result.scores.items()}, "winner": round_result.winner})
         
         return round_result
     

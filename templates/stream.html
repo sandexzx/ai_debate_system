@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Дебаты — поток</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1>Дебаты — поток</h1>
+      <a href="{{ url_for('index', provider=provider) }}" class="btn">← Новый запуск</a>
+    </header>
+
+    <section class="card">
+      <div class="meta">
+        <div><span class="meta-key">Провайдер:</span> <span class="meta-val">{{ 'neuroAPI' if provider == 'neuroapi' else 'OpenRouter' }}</span></div>
+      </div>
+      <div class="qa">
+        <div class="q"><strong>Вопрос:</strong> {{ original_query }}</div>
+        <div class="a"><strong>Уточнённая формулировка:</strong> <span id="enhanced">{{ enhanced_query }}</span> {% if use == 'original' %}<em style="color: var(--muted)">• выбран оригинал</em>{% else %}<em style="color: var(--muted)">• выбрана уточнённая</em>{% endif %}</div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2 class="section-title">Раунды</h2>
+      <div id="chat" class="chat"></div>
+    </section>
+
+    <section class="card">
+      <h2 class="section-title">Итоговый вердикт</h2>
+      <div id="verdict" class="msg"></div>
+    </section>
+
+    <section class="card">
+      <h2 class="section-title">Токены и стоимость</h2>
+      <pre id="tokens" class="tokens"></pre>
+    </section>
+
+    <footer class="footer" id="status">Выполняется...</footer>
+  </div>
+
+  <script>
+    const chat = document.getElementById('chat');
+    const enhancedEl = document.getElementById('enhanced');
+    const verdictEl = document.getElementById('verdict');
+    const tokensEl = document.getElementById('tokens');
+    const statusEl = document.getElementById('status');
+
+    function ensureRound(round) {
+      let marker = document.querySelector(`.round-marker[data-round="${round}"]`);
+      if (!marker) {
+        const sep = document.createElement('div');
+        sep.className = 'round-sep round-marker';
+        sep.dataset.round = String(round);
+        sep.textContent = `Раунд ${round}`;
+        chat.appendChild(sep);
+      }
+    }
+
+    function roleClass(role) {
+      if (role === 'D1') return 'd1';
+      if (role === 'D2') return 'd2';
+      if (role === 'D3') return 'd3';
+      return '';
+    }
+
+    function appendMessage(round, role, html) {
+      ensureRound(round);
+      const wrap = document.createElement('div');
+      wrap.className = `msg ${roleClass(role)}`;
+      const header = document.createElement('div');
+      header.className = 'msg-header';
+      header.textContent = role === 'D1' ? 'D1 • PRO' : role === 'D2' ? 'D2 • CONTRA' : 'D3 • ALT';
+      const body = document.createElement('div');
+      body.className = 'msg-body';
+      body.innerHTML = html;
+      wrap.appendChild(header);
+      wrap.appendChild(body);
+      // summary container
+      const sum = document.createElement('div');
+      sum.className = 'msg-body';
+      sum.style.color = '#4b5563';
+      sum.dataset.summary = `${round}-${role}`;
+      wrap.appendChild(sum);
+      chat.appendChild(wrap);
+    }
+
+    function renderJudge(round, html) {
+      ensureRound(round);
+      const wrap = document.createElement('div');
+      wrap.className = `msg judge`;
+      const header = document.createElement('div');
+      header.className = 'msg-header';
+      header.textContent = 'Судья';
+      const body = document.createElement('div');
+      body.className = 'msg-body';
+      body.innerHTML = html;
+      wrap.appendChild(header);
+      wrap.appendChild(body);
+      chat.appendChild(wrap);
+    }
+
+    window.updateEnhanced = function (text) {
+      enhancedEl.textContent = text;
+    }
+    window.appendArgument = function (round, role, html) {
+      appendMessage(round, role, html);
+    }
+    window.appendSummary = function (round, role, text) {
+      const target = document.querySelector(`[data-summary="${round}-${role}"]`);
+      if (target && text) {
+        target.textContent = `Саммари: ${text}`;
+      }
+    }
+    window.appendJudge = function (round, html) {
+      renderJudge(round, html);
+    }
+    window.showFinalVerdict = function (html) {
+      verdictEl.innerHTML = html;
+    }
+    window.showTokenStats = function (text) {
+      tokensEl.textContent = text;
+    }
+    window.markDone = function () {
+      statusEl.textContent = 'Готово';
+    }
+  </script>
+</body>
+</html>

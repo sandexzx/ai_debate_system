@@ -2,3 +2,5 @@ aiohttp
 tiktoken
 Flask
 python-dotenv
+markdown
+bleach

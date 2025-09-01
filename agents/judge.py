@@ -129,7 +129,8 @@ class Judge:
             current_round=context.current_round,
             arguments_history=updated_history,
             scores_history=context.scores_history,
-            judge_feedback=context.judge_feedback
+            judge_feedback=context.judge_feedback,
+            summaries=context.summaries
         )
     
     def _parse_judge_response(self, response: str, round_arguments: Dict[str, str]) -> RoundResult:

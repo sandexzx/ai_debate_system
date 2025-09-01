@@ -2,7 +2,7 @@ import asyncio
 import aiohttp
 import json
 from typing import Dict, Any, Optional
-from config import ModelConfig
+from config import ModelConfig, Config
 from token_tracker import token_tracker
 
 class APIClient:
@@ -186,6 +186,7 @@ class ModelManager:
         self.models_config = models_config
         self.clients: Dict[str, APIClient] = {}
         self.session_id = session_id
+        self.summary_client: Optional[APIClient] = None
     
     async def __aenter__(self):
         """Инициализируем всех клиентов с информацией о сессии"""
@@ -193,6 +194,32 @@ class ModelManager:
             client = APIClient(config, session_id=self.session_id, role=name)
             await client.__aenter__()
             self.clients[name] = client
+
+        # Дополнительный клиент для саммари: предпочтительно neuroAPI, иначе OpenRouter
+        try:
+            if Config.NEUROAPI_API_KEY and Config.NEUROAPI_API_KEY != "your-neuroapi-key":
+                summary_cfg = ModelConfig(
+                    name="summarizer",
+                    api_key=Config.NEUROAPI_API_KEY,
+                    base_url=Config.NEUROAPI_BASE_URL,
+                    model_id="gemini-2.5-flash-lite",
+                    temperature=0.3,
+                )
+                self.summary_client = APIClient(summary_cfg, session_id=self.session_id, role="summarizer")
+                await self.summary_client.__aenter__()
+            elif Config.OPENROUTER_API_KEY and Config.OPENROUTER_API_KEY != "your-openrouter-key":
+                summary_cfg = ModelConfig(
+                    name="summarizer",
+                    api_key=Config.OPENROUTER_API_KEY,
+                    base_url=Config.OPENROUTER_BASE_URL,
+                    model_id="google/gemini-2.5-flash-lite-preview-06-17",
+                    temperature=0.3,
+                )
+                self.summary_client = APIClient(summary_cfg, session_id=self.session_id, role="summarizer")
+                await self.summary_client.__aenter__()
+        except Exception:
+            # Не фейлим сессию, если саммари недоступно
+            self.summary_client = None
         
         # Запускаем отслеживание токенов для сессии
         if self.session_id and token_tracker:
@@ -204,6 +231,9 @@ class ModelManager:
         """Закрываем всех клиентов и завершаем отслеживание"""
         for client in self.clients.values():
             await client.__aexit__(exc_type, exc_val, exc_tb)
+
+        if self.summary_client:
+            await self.summary_client.__aexit__(exc_type, exc_val, exc_tb)
         
         # Завершаем отслеживание токенов
         if self.session_id and token_tracker:
@@ -215,3 +245,23 @@ class ModelManager:
             raise ValueError(f"Модель {model_name} не найдена")
         
         return await self.clients[model_name].chat_completion(messages, system_prompt)
+
+    async def summarize(self, text: str, language: str = "ru", max_words: int = 60) -> Optional[str]:
+        """Краткий саммари текста через Gemini 2.5 Flash Lite, если доступно.
+
+        Возвращает None, если клиент саммари недоступен.
+        """
+        if not self.summary_client:
+            return None
+
+        sys_prompt = (
+            "Ты помощник, делающий очень короткие саммари. "
+            "Суммируй текст в " + str(max_words) + " словах, по-русски, без лишней воды."
+        )
+        user_prompt = f"Текст для саммари:\n\n{text}\n\nВыведи краткое саммари одним абзацем."
+        messages = [{"role": "user", "content": user_prompt}]
+        try:
+            summary = await self.summary_client.chat_completion(messages, system_prompt=sys_prompt)
+            return summary.strip()
+        except Exception:
+            return None
