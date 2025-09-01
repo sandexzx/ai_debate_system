@@ -1,2 +1,4 @@
 aiohttp
 tiktoken
+Flask
+python-dotenv

@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Результаты дебатов</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1>Результаты дебатов</h1>
+      <a href="{{ url_for('index', provider=provider) }}" class="btn">← Новый запуск</a>
+    </header>
+
+    <section class="card">
+      <div class="meta">
+        <div><span class="meta-key">Провайдер:</span> <span class="meta-val">{{ 'neuroAPI' if provider == 'neuroapi' else 'OpenRouter' }}</span></div>
+        <div><span class="meta-key">Статус:</span> <span class="meta-val">{{ status }}</span></div>
+      </div>
+      <div class="qa">
+        <div class="q"><strong>Вопрос:</strong> {{ query }}</div>
+        {% if enhanced_query and enhanced_query != query %}
+          <div class="a"><strong>Уточнённая формулировка:</strong> {{ enhanced_query }}</div>
+        {% endif %}
+      </div>
+    </section>
+
+    {% if rounds %}
+      <section class="card">
+        <h2 class="section-title">Раунды</h2>
+
+        <div class="chat">
+          {% for r in rounds %}
+            <div class="round-sep">Раунд {{ r.round }}</div>
+
+            <div class="msg d1">
+              <div class="msg-header">D1 • PRO</div>
+              <div class="msg-body">{{ r.arguments.get('D1', '—') }}</div>
+            </div>
+
+            <div class="msg d2">
+              <div class="msg-header">D2 • CONTRA</div>
+              <div class="msg-body">{{ r.arguments.get('D2', '—') }}</div>
+            </div>
+
+            <div class="msg d3">
+              <div class="msg-header">D3 • ALT</div>
+              <div class="msg-body">{{ r.arguments.get('D3', '—') }}</div>
+            </div>
+
+            <div class="msg judge">
+              <div class="msg-header">Судья</div>
+              <div class="msg-body pre">{{ r.judge_feedback }}</div>
+            </div>
+          {% endfor %}
+        </div>
+      </section>
+    {% endif %}
+
+    {% if final_verdict %}
+      <section class="card">
+        <h2 class="section-title">Итоговый вердикт</h2>
+        <pre class="verdict">{{ final_verdict }}</pre>
+      </section>
+    {% endif %}
+
+    {% if token_stats %}
+      <section class="card">
+        <h2 class="section-title">Токены и стоимость</h2>
+        <pre class="tokens">{{ token_stats }}</pre>
+      </section>
+    {% endif %}
+
+    <footer class="footer">Готово • Можете запустить новый спор</footer>
+  </div>
+</body>
+<!--
+  Примечание: вывод судьи и вердикта отображается как pre для сохранения форматирования.
+-->
+</html>
+

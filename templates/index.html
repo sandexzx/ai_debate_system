@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI Debate System — Веб интерфейс</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1>AI Дебаты</h1>
+      <p class="subtitle">Минималистичный интерфейс нейросетевых дебатов</p>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-wrap">
+          {% for category, message in messages %}
+            <div class="flash {{ category }}">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <form class="card form" method="post" action="{{ url_for('debate') }}">
+      <div class="form-row">
+        <label class="label">Провайдер</label>
+        <div class="segmented">
+          <a class="segment {{ 'active' if provider == 'neuroapi' }}" href="?provider=neuroapi">neuroAPI</a>
+          <a class="segment {{ 'active' if provider != 'neuroapi' }}" href="?provider=openrouter">OpenRouter</a>
+        </div>
+        <input type="hidden" name="provider" value="{{ provider }}">
+      </div>
+
+      <div class="grid">
+        {% for role, title in roles %}
+          <div class="grid-item">
+            <label class="label">{{ title }}</label>
+            <select name="{{ role }}" class="input">
+              {% for mid, mname in model_options %}
+                <option value="{{ mid }}" {{ 'selected' if defaults[role] == mid else '' }}>{{ mname }} — {{ mid }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        {% endfor %}
+      </div>
+
+      <div class="form-row">
+        <label class="label">Вопрос для дебатов</label>
+        <textarea class="input" name="query" rows="4" placeholder="Например: Стоит ли внедрять 4‑дневную рабочую неделю?" required></textarea>
+      </div>
+
+      <div class="actions">
+        <button type="submit" class="btn primary">Запустить дебаты</button>
+      </div>
+    </form>
+
+    <footer class="footer">Светлая тема • Скругления • Минимализм</footer>
+  </div>
+</body>
+</html>
+
