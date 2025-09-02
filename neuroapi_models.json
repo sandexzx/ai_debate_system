@@ -1,0 +1,30 @@
+{
+  "models": {
+    "gpt-5-thinking-all": {
+      "display_name": "GPT-5 Thinking All",
+      "description": "GPT-5 модель с возможностью мышления",
+      "pricing": {
+        "input_token_cost": 0.98,
+        "output_token_cost": 7.84,
+        "currency": "USD",
+        "per_tokens": 1
+      },
+      "context_window": 400000,
+      "max_output_tokens": 16384,
+      "capabilities": ["text", "reasoning"]
+    },
+    "gemini-2.5-flash-lite": {
+      "display_name": "gemini-2.5-flash-lite",
+      "description": "Быстрый Gemini",
+      "pricing": {
+        "input_token_cost": 0.08,
+        "output_token_cost": 0.34,
+        "currency": "USD",
+        "per_tokens": 1
+      },
+      "context_window": 1000000,
+      "max_output_tokens": 16384,
+      "capabilities": ["text", "vision"]
+    }
+  }
+}

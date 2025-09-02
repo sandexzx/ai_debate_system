@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import os
 from dataclasses import replace
-from typing import Dict
+from typing import Dict, List, Tuple
 
 from flask import Flask, render_template, request, redirect, url_for, flash, Response
 from flask import stream_with_context
@@ -15,6 +16,21 @@ import bleach
 from config import Config, ModelConfig
 from agents.orchestrator import DebateOrchestrator
 from models.api_client import ModelManager
+
+
+def load_neuroapi_models() -> List[Tuple[str, str]]:
+    """Загружает список моделей из JSON файла"""
+    try:
+        with open('neuroapi_models.json', 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            models = []
+            for model_id, model_info in data['models'].items():
+                display_name = model_info.get('display_name', model_id)
+                models.append((model_id, display_name))
+            return models
+    except (FileNotFoundError, json.JSONDecodeError, KeyError):
+        # Возвращаем дефолтную модель если файл не найден или поврежден
+        return [("gpt-5-thinking-all", "gpt-5-thinking-all")]
 
 
 def build_models_config(provider: str, per_role_models: Dict[str, str]) -> Dict[str, ModelConfig]:
@@ -47,9 +63,7 @@ def create_app() -> Flask:
         ("openai/o3", "OpenAI o3"),
     ]
 
-    neuroapi_models = [
-        ("gpt-5-thinking-all", "gpt-5-thinking-all"),
-    ]
+    neuroapi_models = load_neuroapi_models()
 
     roles = [
         ("gatekeeper", "Gatekeeper"),
@@ -292,7 +306,7 @@ def create_app() -> Flask:
 
 if __name__ == "__main__":
     # Allow FLASK_RUN_PORT or default 5000
-    port = int(os.getenv("PORT", os.getenv("FLASK_RUN_PORT", 5000)))
+    port = int(os.getenv("PORT", os.getenv("FLASK_RUN_PORT", 5001)))
     host = os.getenv("FLASK_RUN_HOST", "0.0.0.0")
     app = create_app()
     app.run(host=host, port=port, debug=os.getenv("FLASK_DEBUG", "0") == "1")
